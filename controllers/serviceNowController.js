@@ -284,6 +284,7 @@ const servSimple = async(req, res) => {
     }
 };
 
+
 const getUserData = async (req, res) => {
   try {
     const requestData = req.body;
