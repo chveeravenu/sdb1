@@ -285,9 +285,206 @@ const servSimple = async(req, res) => {
 };
 
 
+// const getUserData = async (req, res) => {
+//   try {
+//     const requestData = req.body;
+
+//     // Check if request data is null/empty - return all users data
+//     if (!requestData || Object.keys(requestData).length === 0 || requestData === null) {
+//       // Get all users from database
+//       const allUsers = await User.find({}).lean();
+
+//       if (!allUsers || allUsers.length === 0) {
+//         return res.status(404).json({
+//           success: false,
+//           message: 'No users found in database'
+//         });
+//       }
+
+//       // Process each user's data
+//       const processedUsers = allUsers.map(user => {
+//         // Get enrolled course details
+//         const enrolledCoursesDetails = (user.enrolledCourses || []).map(enrollment => {
+//           const courseInfo = sampleCourses.find(course => course._id === enrollment.courseId);
+//           return {
+//             courseId: enrollment.courseId,
+//             courseName: courseInfo ? courseInfo.title : 'Course Not Found',
+//             progress: enrollment.progress || 0,
+//             enrolledAt: enrollment.enrolledAt,
+//             instructor: courseInfo ? courseInfo.instructor : 'Unknown',
+//             category: courseInfo ? courseInfo.category : 'Unknown'
+//           };
+//         });
+
+//         // Get completed course details
+//         const completedCoursesDetails = (user.completedCourses || []).map(completion => {
+//           const courseInfo = sampleCourses.find(course => course._id === completion.courseId);
+//           return {
+//             courseId: completion.courseId,
+//             courseName: courseInfo ? courseInfo.title : 'Course Not Found',
+//             completedAt: completion.completedAt,
+//             finalScore: completion.finalScore || 0,
+//             certificateIssued: completion.certificateIssued || false,
+//             instructor: courseInfo ? courseInfo.instructor : 'Unknown'
+//           };
+//         });
+
+//         return {
+//           userId: user._id,
+//           name: user.name,
+//           email: user.email,
+//           subscriptionPlan: user.subscriptionPlan || 'basic',
+//           totalEnrolledCourses: user.enrolledCourses ? user.enrolledCourses.length : 0,
+//           enrolledCourses: enrolledCoursesDetails,
+//           totalCompletedCourses: user.completedCourses ? user.completedCourses.length : 0,
+//           completedCourses: completedCoursesDetails,
+//           learningStats: {
+//             totalLearningTime: user.totalLearningTime || 0,
+//             currentStreak: user.learningStreak?.current || 0,
+//             longestStreak: user.learningStreak?.longest || 0,
+//             completionRate: (user.completedCourses?.length > 0 && user.enrolledCourses?.length > 0) 
+//               ? Math.round((user.completedCourses.length / user.enrolledCourses.length) * 100) 
+//               : 0
+//           }
+//         };
+//       });
+
+//       return res.status(200).json({
+//         success: true,
+//         message: 'All users data retrieved successfully',
+//         totalUsers: processedUsers.length,
+//         users: processedUsers
+//       });
+//     }
+
+//     // If request data is not null, handle specific user queries here
+//     // You can add specific user filtering logic based on the request data
+//     const { userId, email } = requestData;
+
+//     let query = {};
+//     if (userId) query._id = userId;
+//     if (email) query.email = email;
+
+//     const user = await User.findOne(query).lean();
+
+//     if (!user) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'User not found'
+//       });
+//     }
+
+//       // Process single user data (same logic as above)
+//       const enrolledCoursesDetails = (user.enrolledCourses || []).map(enrollment => {
+//         const courseInfo = sampleCourses.find(course => course._id === enrollment.courseId);
+//         return {
+//           courseId: enrollment.courseId,
+//           courseName: courseInfo ? courseInfo.title : 'Course Not Found',
+//           progress: enrollment.progress || 0,
+//           enrolledAt: enrollment.enrolledAt,
+//           instructor: courseInfo ? courseInfo.instructor : 'Unknown',
+//           category: courseInfo ? courseInfo.category : 'Unknown'
+//         };
+//       });
+
+//       const completedCoursesDetails = (user.completedCourses || []).map(completion => {
+//         const courseInfo = sampleCourses.find(course => course._id === completion.courseId);
+//         return {
+//           courseId: completion.courseId,
+//           courseName: courseInfo ? courseInfo.title : 'Course Not Found',
+//           completedAt: completion.completedAt,
+//           finalScore: completion.finalScore || 0,
+//           certificateIssued: completion.certificateIssued || false,
+//           instructor: courseInfo ? courseInfo.instructor : 'Unknown'
+//         };
+//       });
+
+//     const userData = {
+//       userId: user._id,
+//       name: user.name || 'Unknown',
+//       email: user.email || 'No email',
+//       subscriptionPlan: user.subscriptionPlan || 'basic',
+//       totalEnrolledCourses: user.enrolledCourses ? user.enrolledCourses.length : 0,
+//       enrolledCourses: enrolledCoursesDetails,
+//       totalCompletedCourses: user.completedCourses ? user.completedCourses.length : 0,
+//       completedCourses: completedCoursesDetails,
+//       learningStats: {
+//         totalLearningTime: user.totalLearningTime || 0,
+//         currentStreak: user.learningStreak?.current || 0,
+//         longestStreak: user.learningStreak?.longest || 0,
+//         completionRate: (user.completedCourses?.length > 0 && user.enrolledCourses?.length > 0) 
+//           ? Math.round((user.completedCourses.length / user.enrolledCourses.length) * 100) 
+//           : 0
+//       }
+//     };
+
+//     return res.status(200).json({
+//       success: true,
+//       message: 'User data retrieved successfully',
+//       user: userData
+//     });
+
+//   } catch (error) {
+//     console.error('Get user data error:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Server error while fetching user data',
+//       error: error.message
+//     });
+//   }
+// };
+
 const getUserData = async (req, res) => {
   try {
     const requestData = req.body;
+
+    // Helper function to process user data
+    const processUserData = (user) => {
+      // Get enrolled course details
+      const enrolledCoursesDetails = (user.enrolledCourses || []).map(enrollment => {
+        const courseInfo = sampleCourses.find(course => course._id === enrollment.courseId);
+        return {
+          courseId: enrollment.courseId,
+          courseName: courseInfo ? courseInfo.title : 'Course Not Found',
+          progress: enrollment.progress || 0,
+          enrolledAt: enrollment.enrolledAt,
+          instructor: courseInfo ? courseInfo.instructor : 'Unknown',
+          category: courseInfo ? courseInfo.category : 'Unknown'
+        };
+      });
+
+      // Get completed course details
+      const completedCoursesDetails = (user.completedCourses || []).map(completion => {
+        const courseInfo = sampleCourses.find(course => course._id === completion.courseId);
+        return {
+          courseId: completion.courseId,
+          courseName: courseInfo ? courseInfo.title : 'Course Not Found',
+          completedAt: completion.completedAt,
+          finalScore: completion.finalScore || 0,
+          certificateIssued: completion.certificateIssued || false,
+          instructor: courseInfo ? courseInfo.instructor : 'Unknown'
+        };
+      });
+
+      return {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        subscriptionPlan: user.subscriptionPlan || 'basic',
+        totalEnrolledCourses: user.enrolledCourses ? user.enrolledCourses.length : 0,
+        enrolledCourses: enrolledCoursesDetails,
+        totalCompletedCourses: user.completedCourses ? user.completedCourses.length : 0,
+        completedCourses: completedCoursesDetails,
+        learningStats: {
+          totalLearningTime: user.totalLearningTime || 0,
+          currentStreak: user.learningStreak?.current || 0,
+          longestStreak: user.learningStreak?.longest || 0,
+          completionRate: (user.completedCourses?.length > 0 && user.enrolledCourses?.length > 0) 
+            ? Math.round((user.completedCourses.length / user.enrolledCourses.length) * 100) 
+            : 0
+        }
+      };
+    };
 
     // Check if request data is null/empty - return all users data
     if (!requestData || Object.keys(requestData).length === 0 || requestData === null) {
@@ -302,52 +499,7 @@ const getUserData = async (req, res) => {
       }
 
       // Process each user's data
-      const processedUsers = allUsers.map(user => {
-        // Get enrolled course details
-        const enrolledCoursesDetails = (user.enrolledCourses || []).map(enrollment => {
-          const courseInfo = sampleCourses.find(course => course._id === enrollment.courseId);
-          return {
-            courseId: enrollment.courseId,
-            courseName: courseInfo ? courseInfo.title : 'Course Not Found',
-            progress: enrollment.progress || 0,
-            enrolledAt: enrollment.enrolledAt,
-            instructor: courseInfo ? courseInfo.instructor : 'Unknown',
-            category: courseInfo ? courseInfo.category : 'Unknown'
-          };
-        });
-
-        // Get completed course details
-        const completedCoursesDetails = (user.completedCourses || []).map(completion => {
-          const courseInfo = sampleCourses.find(course => course._id === completion.courseId);
-          return {
-            courseId: completion.courseId,
-            courseName: courseInfo ? courseInfo.title : 'Course Not Found',
-            completedAt: completion.completedAt,
-            finalScore: completion.finalScore || 0,
-            certificateIssued: completion.certificateIssued || false,
-            instructor: courseInfo ? courseInfo.instructor : 'Unknown'
-          };
-        });
-
-        return {
-          userId: user._id,
-          name: user.name,
-          email: user.email,
-          subscriptionPlan: user.subscriptionPlan || 'basic',
-          totalEnrolledCourses: user.enrolledCourses ? user.enrolledCourses.length : 0,
-          enrolledCourses: enrolledCoursesDetails,
-          totalCompletedCourses: user.completedCourses ? user.completedCourses.length : 0,
-          completedCourses: completedCoursesDetails,
-          learningStats: {
-            totalLearningTime: user.totalLearningTime || 0,
-            currentStreak: user.learningStreak?.current || 0,
-            longestStreak: user.learningStreak?.longest || 0,
-            completionRate: (user.completedCourses?.length > 0 && user.enrolledCourses?.length > 0) 
-              ? Math.round((user.completedCourses.length / user.enrolledCourses.length) * 100) 
-              : 0
-          }
-        };
-      });
+      const processedUsers = allUsers.map(processUserData);
 
       return res.status(200).json({
         success: true,
@@ -357,9 +509,61 @@ const getUserData = async (req, res) => {
       });
     }
 
-    // If request data is not null, handle specific user queries here
-    // You can add specific user filtering logic based on the request data
+    // Check if request contains emails array
+    if (requestData.emails && Array.isArray(requestData.emails) && requestData.emails.length > 0) {
+      const { emails } = requestData;
+
+      // Validate email format (basic validation)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const invalidEmails = emails.filter(email => !emailRegex.test(email));
+      
+      if (invalidEmails.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format found',
+          invalidEmails
+        });
+      }
+
+      // Find users whose emails are NOT in the provided array (remaining users)
+      const users = await User.find(
+        { email: { $nin: emails } }  // $nin = "not in" - gets users NOT in the array
+      ).lean();
+
+      if (!users || users.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No remaining users found (all users have emails in the excluded list)',
+          excludedEmails: emails
+        });
+      }
+
+      // Process each user's data
+      const processedUsers = users.map(processUserData);
+
+      // Get total users count for reference
+      const totalUsersCount = await User.countDocuments({});
+
+      return res.status(200).json({
+        success: true,
+        message: `Found ${users.length} remaining users (excluding ${emails.length} specified emails)`,
+        totalUsersInDB: totalUsersCount,
+        excludedEmailsCount: emails.length,
+        remainingUsersCount: users.length,
+        excludedEmails: emails,
+        users: processedUsers
+      });
+    }
+
+    // If request data contains specific user queries (userId or email)
     const { userId, email } = requestData;
+
+    if (!userId && !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide either userId, email, or emails array'
+      });
+    }
 
     let query = {};
     if (userId) query._id = userId;
@@ -374,49 +578,8 @@ const getUserData = async (req, res) => {
       });
     }
 
-      // Process single user data (same logic as above)
-      const enrolledCoursesDetails = (user.enrolledCourses || []).map(enrollment => {
-        const courseInfo = sampleCourses.find(course => course._id === enrollment.courseId);
-        return {
-          courseId: enrollment.courseId,
-          courseName: courseInfo ? courseInfo.title : 'Course Not Found',
-          progress: enrollment.progress || 0,
-          enrolledAt: enrollment.enrolledAt,
-          instructor: courseInfo ? courseInfo.instructor : 'Unknown',
-          category: courseInfo ? courseInfo.category : 'Unknown'
-        };
-      });
-
-      const completedCoursesDetails = (user.completedCourses || []).map(completion => {
-        const courseInfo = sampleCourses.find(course => course._id === completion.courseId);
-        return {
-          courseId: completion.courseId,
-          courseName: courseInfo ? courseInfo.title : 'Course Not Found',
-          completedAt: completion.completedAt,
-          finalScore: completion.finalScore || 0,
-          certificateIssued: completion.certificateIssued || false,
-          instructor: courseInfo ? courseInfo.instructor : 'Unknown'
-        };
-      });
-
-    const userData = {
-      userId: user._id,
-      name: user.name || 'Unknown',
-      email: user.email || 'No email',
-      subscriptionPlan: user.subscriptionPlan || 'basic',
-      totalEnrolledCourses: user.enrolledCourses ? user.enrolledCourses.length : 0,
-      enrolledCourses: enrolledCoursesDetails,
-      totalCompletedCourses: user.completedCourses ? user.completedCourses.length : 0,
-      completedCourses: completedCoursesDetails,
-      learningStats: {
-        totalLearningTime: user.totalLearningTime || 0,
-        currentStreak: user.learningStreak?.current || 0,
-        longestStreak: user.learningStreak?.longest || 0,
-        completionRate: (user.completedCourses?.length > 0 && user.enrolledCourses?.length > 0) 
-          ? Math.round((user.completedCourses.length / user.enrolledCourses.length) * 100) 
-          : 0
-      }
-    };
+    // Process single user data
+    const userData = processUserData(user);
 
     return res.status(200).json({
       success: true,
@@ -429,7 +592,7 @@ const getUserData = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error while fetching user data',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
