@@ -12,6 +12,7 @@ const ServCon = require('./routes/serviceNow');
 const mailer = require('./routes/mailer')
 const cancellation = require('./routes/cancellationr')
 const mailTra = require('./routes/mailtr');
+const Rod = require('./routes/RodRouters')
 const cors = require('cors');
 const BodyParser = require('body-parser');
 
@@ -43,6 +44,7 @@ app.use('/ServiceNow',ServCon);
 app.use('/mailer',mailer);
 app.use('/cancellation',cancellation);
 app.use('/track',mailTra);
+app.use('/Rod',Rod)
 
 app.use(logger('dev'));
 app.use(express.json());

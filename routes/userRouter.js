@@ -20,6 +20,7 @@ router.post('/coursechec', userController.enrollcheck);
 router.post('/updateprogress', userController.updateProgress);
 router.post('/updateaccess', userController.updateAccess);
 router.post('/getprogress', userController.getCourseProgress);
+router.post('/activate-free-trial', userController.activateFreeTrial);
 
 // Enroll in a course via /enroll/:courseId
 router.post('/enroll/:courseId', authMiddleware, async (req, res) => {

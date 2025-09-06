@@ -3,9 +3,12 @@ const route = express.Router();
 const ServCon = require('../controllers/serviceNowController')
 // const servi = require('../controllers/courseController')
 const sendretmail = require('../controllers/mailcontroller')
+const userController = require('../controllers/userController');
 
 route.post('/',ServCon.serv);
 route.post('/apex',ServCon.getUserData);
 route.post('/retentionMailSend',sendretmail.retmailsend);
+// route.post('/Rod1',sende.Rodabc)
+route.post('/offer-free-trial', userController.offerFreeTrial);
 
 module.exports = route;

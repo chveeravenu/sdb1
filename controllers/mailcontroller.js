@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const User = require('../models/User');
 
-
 // Configure nodemailer transporter - FIXED: createTransport (not createTransporter)
 const transporter = nodemailer.createTransport({
   service: 'gmail', // You can use other services like 'outlook', 'yahoo', etc.

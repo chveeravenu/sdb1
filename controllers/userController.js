@@ -1,4 +1,3 @@
-// controllers/userController.js
 const User = require('../models/User');
 const Course = require('../models/Course');
 const jwt = require('jsonwebtoken');
@@ -102,7 +101,6 @@ const userController = {
   courseu: async (req, res) => {
     try {
       const { email, courseId } = req.body;
-      console.log(email,courseId)
       if (!email || !courseId) {
         return res.status(400).json({ success: false, message: 'Email and courseId are required' });
       }
@@ -135,6 +133,7 @@ const userController = {
     }
   },
 
+  // MODIFIED: Checks for enrollment OR an active free trial
   enrollcheck: async (req, res) => {
     try {
       const { email, courseId } = req.body;
@@ -146,24 +145,26 @@ const userController = {
         return res.status(404).json({ success: false, message: 'User not found', isEnrolled: false, progress: 0 });
       }
 
+      // Check if the user's free trial is active and not expired
+      const isFreeTrialActive = user.freeTrialStatus === 'active' && user.freeTrialExpiry && user.freeTrialExpiry > new Date();
+
       const enrolledCourse = user.enrolledCourses.find(c => c.courseId.toString() === courseId);
-      if (enrolledCourse) {
+      if (enrolledCourse || isFreeTrialActive) {
         return res.status(200).json({
           success: true,
-          message: 'User is enrolled in this course',
-          isEnrolled: true,
-          progress: enrolledCourse.progress || 0,
-          enrolledAt: enrolledCourse.enrolledAt,
-          lastAccessed: enrolledCourse.lastAccessed,
-          completedLessons: enrolledCourse.completedLessons || [],
-          totalWatchTime: enrolledCourse.totalWatchTime || 0
+          message: 'User has access to this course',
+          isEnrolled: !!enrolledCourse, // isEnrolled is only true if they paid/enrolled
+          isFreeTrialActive, // New flag is always returned
+          progress: enrolledCourse ? enrolledCourse.progress : 0,
+          completedLessons: enrolledCourse ? enrolledCourse.completedLessons : [],
+          freeTrialExpiry: user.freeTrialExpiry
         });
       } else {
-        return res.status(200).json({ success: true, message: 'User is not enrolled in this course', isEnrolled: false, progress: 0 });
+        return res.status(200).json({ success: true, message: 'User does not have access to this course', isEnrolled: false, isFreeTrialActive, progress: 0 });
       }
     } catch (error) {
       console.error('Error checking course enrollment:', error);
-      res.status(500).json({ success: false, message: 'Internal server error', error: error.message, isEnrolled: false, progress: 0 });
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message, isEnrolled: false, isFreeTrialActive: false });
     }
   },
 
@@ -185,7 +186,7 @@ const userController = {
 
       if (watchTime) {
         user.enrolledCourses[idx].totalWatchTime = (user.enrolledCourses[idx].totalWatchTime || 0) + watchTime;
-        user.totalLearningTime = (user.totalLearningTime || 0) + watchTime; // keep global learning minutes updated
+        user.totalLearningTime = (user.totalLearningTime || 0) + watchTime;
       }
 
       if (user.enrolledCourses[idx].progress >= 100) {
@@ -263,6 +264,59 @@ const userController = {
     }
   },
 
+  // ===== NEW: Free trial controller functions =====
+  offerFreeTrial: async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      if (user.freeTrialStatus !== 'none') {
+        return res.status(400).json({ success: false, message: 'Free trial has already been offered or is active for this user.' });
+      }
+
+      user.freeTrialStatus = 'offered';
+      await user.save();
+      res.status(200).json({ success: true, message: 'Free trial successfully offered to the user.' });
+    } catch (error) {
+      console.error('Error offering free trial:', error);
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+  },
+
+  activateFreeTrial: async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      if (user.freeTrialStatus !== 'offered') {
+        return res.status(400).json({ success: false, message: 'Free trial is not available to be activated.' });
+      }
+
+      user.freeTrialStatus = 'active';
+      user.freeTrialExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await user.save();
+
+      res.status(200).json({ success: true, message: 'Free trial activated successfully!' });
+    } catch (error) {
+      console.error('Error activating free trial:', error);
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+  },
+
+  // ===== Login history =====
   updateLoginHistory: async (req, res) => {
     try {
       const user = await userController._getUserFromToken(req);
@@ -282,21 +336,19 @@ const userController = {
     }
   },
 
-  // ===== NEW: Learning time (per minute possible) =====
+  // ===== Learning time & website usage =====
   updateLearningTime: async (req, res) => {
     try {
       const user = await userController._getUserFromToken(req);
-      const { minutesSpent } = req.body; // integer minutes (send 1 each minute)
+      const { minutesSpent } = req.body;
       const minutes = Number(minutesSpent);
 
       if (!minutes || minutes <= 0) {
         return res.status(400).json({ message: 'minutesSpent must be a positive number' });
       }
 
-      // Update total learning minutes
       user.totalLearningTime = (user.totalLearningTime || 0) + minutes;
 
-      // Update daily bucket "YYYY-MM-DD"
       const todayKey = new Date().toISOString().split('T')[0];
       const day = user.dailyLearningTime.find(d => d.date === todayKey);
       if (day) day.minutes += minutes;
@@ -311,21 +363,18 @@ const userController = {
     }
   },
 
-  // ===== NEW: Overall website usage =====
   updateWebsiteUsage: async (req, res) => {
     try {
       const user = await userController._getUserFromToken(req);
-      const { minutesSpent } = req.body; // integer minutes
+      const { minutesSpent } = req.body;
       const minutes = Number(minutesSpent);
 
       if (!minutes || minutes <= 0) {
         return res.status(400).json({ message: 'minutesSpent must be a positive number' });
       }
 
-      // Update global total
       user.totalWebsiteUsage = (user.totalWebsiteUsage || 0) + minutes;
 
-      // Update today's bucket
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const bucket = user.websiteUsageTime.find(e => new Date(e.date).toDateString() === today.toDateString());
       if (bucket) bucket.duration += minutes;
@@ -340,7 +389,6 @@ const userController = {
     }
   },
 
-  // ===== NEW: Combined usage stats =====
   getUsageStats: async (req, res) => {
     try {
       const user = await userController._getUserFromToken(req);
