@@ -316,6 +316,63 @@ const userController = {
     }
   },
 
+  // NEW: Premium Extension controller functions
+  offerPremiumExtension: async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      // Prevent offering if already offered or claimed
+      if (user.premiumExtensionStatus !== 'none') {
+        return res.status(400).json({ success: false, message: 'Premium extension already offered or claimed' });
+      }
+
+      user.premiumExtensionStatus = 'offered';
+      await user.save();
+      res.status(200).json({ success: true, message: 'Premium extension successfully offered to the user.' });
+    } catch (error) {
+      console.error('Error offering premium extension:', error);
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+  },
+
+ claimPremiumExtension: async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      if (user.premiumExtensionStatus !== 'offered') {
+        return res.status(400).json({ success: false, message: 'No premium extension offer to claim' });
+      }
+
+      const oneMonthInMs = 30 * 24 * 60 * 60 * 1000;
+      let newExpiryDate = user.subscriptionExpiry || new Date();
+      newExpiryDate = new Date(newExpiryDate.getTime() + oneMonthInMs);
+
+      user.premiumExtensionStatus = 'claimed';
+      user.premiumExtensionClaimedAt = new Date();
+      user.subscriptionExpiry = newExpiryDate;
+      await user.save();
+      
+      res.status(200).json({ success: true, message: 'Premium extension successfully claimed.', newExpiryDate });
+    } catch (error) {
+      console.error('Error claiming premium extension:', error);
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+  },
+
   // ===== Login history =====
   updateLoginHistory: async (req, res) => {
     try {
@@ -388,6 +445,61 @@ const userController = {
       res.status(500).json({ message: 'Error updating website usage', error: error.message });
     }
   },
+
+ offerTimeLimitedDiscount: async (req, res) => {
+    try {
+      console.log("aa")
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      if (user.discountOfferStatus !== 'none') {
+        return res.status(400).json({ success: false, message: 'Discount offer already active or claimed for this user.' });
+      }
+
+      const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+      user.discountOfferStatus = 'offered';
+      user.discountOfferExpiry = new Date(Date.now() + twentyFourHoursInMs);
+      await user.save();
+      
+      res.status(200).json({ success: true, message: 'Time-limited discount successfully offered.' });
+    } catch (error) {
+      console.error('Error offering discount:', error);
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+  },
+  
+  // NEW: Claim time-limited discount
+  claimTimeLimitedDiscount: async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      if (user.discountOfferStatus !== 'offered' || user.discountOfferExpiry <= new Date()) {
+        return res.status(400).json({ success: false, message: 'Discount offer is not available or has expired.' });
+      }
+      
+      user.discountOfferStatus = 'claimed';
+      await user.save();
+
+      res.status(200).json({ success: true, message: 'Discount successfully claimed!' });
+    } catch (error) {
+      console.error('Error claiming discount:', error);
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+  },
+  
 
   getUsageStats: async (req, res) => {
     try {

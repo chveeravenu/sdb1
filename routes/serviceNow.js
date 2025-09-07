@@ -11,4 +11,9 @@ route.post('/retentionMailSend',sendretmail.retmailsend);
 // route.post('/Rod1',sende.Rodabc)
 route.post('/offer-free-trial', userController.offerFreeTrial);
 
+// NEW: Endpoint for ServiceNow to offer premium extension
+route.post('/offer-premium-extension', userController.offerPremiumExtension);
+
+route.post('/offer-time-limited-discount', userController.offerTimeLimitedDiscount);
+
 module.exports = route;

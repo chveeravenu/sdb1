@@ -1,3 +1,5 @@
+// models/User.js
+
 const mongoose = require('mongoose');
 
 const DailyLearningSchema = new mongoose.Schema({
@@ -59,6 +61,25 @@ const userSchema = new mongoose.Schema({
     default: 'none'
   },
   freeTrialExpiry: {
+    type: Date,
+    default: null
+  },
+  premiumExtensionStatus: {
+    type: String,
+    enum: ['none', 'offered', 'claimed'],
+    default: 'none'
+  },
+  premiumExtensionClaimedAt: {
+    type: Date,
+    default: null
+  },
+  // NEW: Fields for time-limited discount
+  discountOfferStatus: {
+    type: String,
+    enum: ['none', 'offered', 'claimed'],
+    default: 'none'
+  },
+  discountOfferExpiry: {
     type: Date,
     default: null
   }

@@ -1,4 +1,3 @@
-// routes/userRouter.js
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -21,6 +20,9 @@ router.post('/updateprogress', userController.updateProgress);
 router.post('/updateaccess', userController.updateAccess);
 router.post('/getprogress', userController.getCourseProgress);
 router.post('/activate-free-trial', userController.activateFreeTrial);
+// NEW: Routes for premium extension
+router.post('/offer-premium-extension', userController.offerPremiumExtension);
+router.post('/claim-premium-extension', userController.claimPremiumExtension);
 
 // Enroll in a course via /enroll/:courseId
 router.post('/enroll/:courseId', authMiddleware, async (req, res) => {
@@ -60,5 +62,7 @@ router.post('/update-login-history', authMiddleware, userController.updateLoginH
 router.post('/update-learning-time', authMiddleware, userController.updateLearningTime);
 router.post('/update-website-usage', authMiddleware, userController.updateWebsiteUsage);
 router.get('/usage-stats', authMiddleware, userController.getUsageStats);
+
+router.post('/claim-time-limited-discount', userController.claimTimeLimitedDiscount);
 
 module.exports = router;
