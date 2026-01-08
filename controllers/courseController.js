@@ -258,11 +258,39 @@ const sampleCourses = [
 ];
 
 const courseController = {
-  getAllCourses: async (req, res) => {
+
+  
+getAllCourses: async (req, res) => {
     try {
+      const allCourses = sampleCourses; // In a real app, this would be from DB
+
+      const token = req.headers.authorization?.split(' ')[1];
+      let isDiscountActive = false;
+
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          const user = await User.findById(decoded.userId);
+          if (user && user.discountOfferStatus === 'offered' && user.discountOfferExpiry && user.discountOfferExpiry > new Date()) {
+            isDiscountActive = true;
+          }
+        } catch (authError) {
+          console.log('Token is invalid, cannot apply discount logic:', authError.message);
+        }
+      }
+
+      const coursesWithDiscount = allCourses.map(course => {
+        if (isDiscountActive && course.isPremium) {
+          const discountedPrice = course.price * 0.5;
+          return { ...course, discountedPrice };
+        }
+        return course;
+      });
+
       res.json({
         message: 'Courses fetched successfully',
-        courses: sampleCourses
+        courses: coursesWithDiscount,
+        isDiscountActive
       });
     } catch (error) {
       console.error('Get courses error:', error);
@@ -270,18 +298,39 @@ const courseController = {
     }
   },
 
+  // MODIFIED: Apply 50% discount to a specific course
   getCourseById: async (req, res) => {
     try {
       const { id } = req.params;
-      const course = sampleCourses.find(c => c._id === id);
+      let course = sampleCourses.find(c => c._id === id);
 
       if (!course) {
         return res.status(404).json({ message: 'Course not found' });
       }
+      
+      const token = req.headers.authorization?.split(' ')[1];
+      let isDiscountActive = false;
+
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          const user = await User.findById(decoded.userId);
+          if (user && user.discountOfferStatus === 'offered' && user.discountOfferExpiry && user.discountOfferExpiry > new Date()) {
+            isDiscountActive = true;
+            if (course.isPremium) {
+              const discountedPrice = course.price * 0.5;
+              course = { ...course, discountedPrice };
+            }
+          }
+        } catch (authError) {
+          console.log('Token is invalid, cannot apply discount logic:', authError.message);
+        }
+      }
 
       res.json({
         message: 'Course fetched successfully',
-        course
+        course,
+        isDiscountActive
       });
     } catch (error) {
       console.error('Get course error:', error);

@@ -1,6 +1,7 @@
 const express = require('express');
 const Rod1 = require('../models/Rod1'); // Your subscription model
 
+
 const Rodabc = async (req, res) => {
     try {
         console.log('Request body:', req.body);
